@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diary App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f9;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      text-align: center;
+      margin-top: 20px;
+      color: #333;
+    }
+
+    #app {
+      width: 80%;
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: white;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 120px;
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 16px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      resize: none;
+    }
+
+    button {
+      display: inline-block;
+      padding: 10px 20px;
+      margin-top: 10px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    #entries-container {
+      margin-top: 20px;
+    }
+
+    .entry {
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .entry div {
+      margin-bottom: 5px;
+    }
+
+    .entry strong {
+      color: #333;
+    }
+
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+
+    .blue-entry {
+      background-color: #a1c8f2; /* Pastel Blue */
+    }
+
+    .pink-entry {
+      background-color: #f2a1c8; /* Pastel Pink */
+    }
+
+    .button-container {
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    .blue-btn {
+      background-color: #4a90e2;
+    }
+
+    .pink-btn {
+      background-color: #f28ab2;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <h1>Diary Entries</h1>
+
+    <div>
+      <textarea id="entryText" placeholder="Write your entry here..."></textarea>
+      <div class="button-container">
+        <button class="blue-btn" onclick="createEntry(true)">Josh</button>
+        <button class="pink-btn" onclick="createEntry(false)">Kami</button>
+      </div>
+    </div>
+
+    <h2>Entries:</h2>
+    <div id="entries"></div> <!-- Entries will be displayed here -->
+  </div>
+
+  <script>
+    const apiUrl = "http://127.0.0.1:8090"; // Local PocketBase API URL
+
+    // Function to create a new entry
+    async function createEntry(isJosh) {
+      const entryText = document.getElementById("entryText").value.trim();
+      
+      if (!entryText) {
+        alert("Please enter some text!");
+        return;
+      }
+
+      const entryData = {
+        text: entryText,
+        colour: isJosh, // true for Josh (blue), false for Kami (pink)
+      };
+
+      try {
+        const response = await fetch(`${apiUrl}/api/collections/entries/records`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(entryData),
+        });
+
+        const responseData = await response.json(); // Parse response as JSON
+
+        if (response.ok) {
+          console.log("Entry Created:", responseData); // Log the response to see what PocketBase returns
+          document.getElementById("entryText").value = ""; // Clear input
+          loadEntries(); // Reload the entries
+        } else {
+          console.error("Error creating entry:", responseData); // Log detailed error from PocketBase
+          alert("Error creating entry!");
+        }
+      } catch (error) {
+        console.error("Error:", error);
+      }
+    }
+
+    // Function to load entries and display them on the page
+    async function loadEntries() {
+      const entriesContainer = document.getElementById("entries");
+      entriesContainer.innerHTML = ""; // Clear existing entries
+
+      try {
+        const response = await fetch(`${apiUrl}/api/collections/entries/records`);
+        const data = await response.json();
+        const entries = data.items; // Get the 'items' array from the response
+
+        // Display each entry
+        entries.forEach((entry) => {
+          console.log("Entry:", entry); // Log entry for debugging
+          const entryDiv = document.createElement("div");
+          entryDiv.className = "entry";
+          
+          // Check if the `colour` field is true or false, and apply appropriate classes
+          if (entry.colour === true) {
+            entryDiv.classList.add("blue-entry"); // Josh's entry (blue)
+          } else if (entry.colour === false) {
+            entryDiv.classList.add("pink-entry"); // Kami's entry (pink)
+          }
+
+          entryDiv.innerHTML = `
+            <div><strong>Date:</strong> ${new Date(entry.created).toLocaleString()}</div>
+            <div>${entry.text.substring(0, 50)}</div>
+          `;
+          entriesContainer.appendChild(entryDiv);
+        });
+      } catch (error) {
+        console.error("Error fetching entries:", error);
+      }
+    }
+
+    // Load entries when the page is loaded
+    loadEntries();
+  </script>
+</body>
+</html>
